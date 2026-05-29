@@ -12,6 +12,7 @@ Inject it to a program via:
 Also added a wrapper around the _exit(), _Exit() and syscall() functions to show leaks reports when program force quits. It does not show it for normal linux commands like ls or cat.. because of LD_PRELOAD limitations.
 
 **----------------------------------**
+
 Added an optional argument. If you add the argument free, it will free the memory. If no argument is added, it only shows the memory leaks and exits without freeing them.
 
 Output without argument:
