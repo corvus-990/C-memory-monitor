@@ -10,3 +10,9 @@ Inject it to a program via:
 `LD_PRELOAD="./mem_leak.so" ./<program>`
 
 Also added a wrapper around the _exit(), _Exit() and syscall() functions to show leaks reports when program force quits. It does not show it for normal linux commands like ls or cat.. because of LD_PRELOAD limitations.
+
+
+Example:
+<img width="2006" height="509" alt="image" src="https://github.com/user-attachments/assets/c4ef7e9f-d4fd-45c7-ab7f-d686dc7e2207" />
+
+If you have reallocated a NULL pointer, the program will detect it as MALLOC, simply because reallocating a NULL pointer is like using malloc to allocate.
