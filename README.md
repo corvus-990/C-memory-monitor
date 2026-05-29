@@ -3,6 +3,7 @@ Lightweight simple memory leak detector for Linux programmed in C. It wraps mall
 
 Compile the program via:
 `gcc -fPIC -shared -o mem_leak.so memory_monitor.c`
+**IGNORE GCC WARNINGS**
 
 Inject it to a program via:
 `LD_PRELOAD="./mem_leak.so" ./<program>`
