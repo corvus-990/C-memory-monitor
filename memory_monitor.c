@@ -29,8 +29,39 @@ static bool calloc_initialize;
 static bool unistd_exit_initialize;
 static bool stdlib_exit_initialize;
 static bool syscall_exit_initialize;
+static bool mem_leak_disable;
+static bool free_mem;
 static mem_log hash_t[HASH_SIZE];
-void __attribute__((constructor)) initialize(){
+void error_msg(char *name[],bool *too_many){
+    char buffer[255];
+    if(*too_many){
+      int invarg_count=snprintf(buffer,255,"%s",name[1]);
+      write(2,"\"",1);
+      write(2,buffer,invarg_count);
+      write(2,"\" is not a valid argument\n",strlen("\" is not a valid argument\n"));
+    }else{
+      write(2,"Too many arguments\n",19);
+    }
+    write(2,"Usage: LD_PRELOAD=\"./<program.so>\" ",strlen("Usage: LD_PRELOAD=\"./<program.so>\" "));
+    int arg1_count=snprintf(buffer,255,"%s",name[0]);
+    write(2,buffer,arg1_count);
+    write(2," <optional arg: free>\n",22);
+    mem_leak_disable=1;
+    _Exit(0);
+}
+void __attribute__((constructor)) initialize(int argc,char *argv[]){
+  char *fr="free";
+  bool too_many_args=0;
+  if(argc>2){
+    error_msg(argv,&too_many_args);
+  }
+  if(argc==2){
+    if((strcmp(argv[1],fr)!=0)){
+      too_many_args=1;
+      error_msg(argv,&too_many_args);
+    }
+    (strcmp(argv[1],fr)==0)?free_mem=1:free_mem;
+  }
   static mem_log init_log={0,NULL,1,NULL};
   for(int i=0;i<HASH_SIZE;i++){
     hash_t[i]=init_log;
@@ -243,29 +274,52 @@ void *calloc(size_t blocks,size_t bytes){
 }
 
 void call_mem_leak(void){
-  char *title="\n\n-------MEMORY LEAKS-------\n\n";
-  write(2,title,strlen(title));
-  int size_a;
-  int size_s;
-  char buffer_addr[17];
-  char buffer_size[14];
-  char *leak="[LEAK   ]\t\t";
-  int leaks=0;
-  for(int i=0;i<HASH_SIZE;i++){
-    if(hash_t[i].ptr!=NULL){
-      size_a=snprintf(buffer_addr,17,"%p",hash_t[i].ptr);
-      size_s=snprintf(buffer_size,14,"%d",(int)hash_t[i].user_size);
-      write(2,leak,strlen(leak));
-      write(2,buffer_addr,size_a);
-      write(2,"\t(",2);
-      write(2,buffer_size,size_s);
-      write(2," Bytes)\n",8);
-      leaks++;
+  if(!mem_leak_disable){
+    char *title="\n\n-------MEMORY LEAKS-------\n";
+    write(2,title,strlen(title));
+    int size_a;
+    int size_s;
+    char buffer_addr[17];
+    char buffer_size[14];
+    char total_leaked_bytes[14];
+    unsigned total_leaked_bytes_add=0;
+    char *leak="[LEAK   ]\t\t";
+    int leaks=0;
+    for(int i=0;i<HASH_SIZE;i++){
+      if(hash_t[i].ptr!=NULL){
+        size_a=snprintf(buffer_addr,17,"%p",hash_t[i].ptr);
+        size_s=snprintf(buffer_size,14,"%d",(int)hash_t[i].user_size);
+        total_leaked_bytes_add+=(int)(hash_t[i].user_size);
+        write(2,leak,strlen(leak));
+        write(2,buffer_addr,size_a);
+        write(2,"\t(",2);
+        write(2,buffer_size,size_s);
+        write(2," Bytes)\n",8);
+        leaks++;
+      }
     }
-  }
 
-  if(leaks==0){
-    write(2,"0 memory leaks\n",15);
+    if(leaks==0){
+      write(2,"\nTotal leaked bytes: 0B\n",23);
+    }else{
+      write(2,"Total leaked bytes: ",20);
+      int bytes_leaked_total=snprintf(total_leaked_bytes,14,"%d",total_leaked_bytes_add);
+      write(2,total_leaked_bytes,bytes_leaked_total);
+      write(2,"B\n",2);
+    }
+
+    if(free_mem){
+      for(int i=0;i<HASH_SIZE;i++){
+         if(hash_t[i].ptr!=NULL){
+            write(2,"\n--ALL LEAKS FREED--\n",21);
+            free(hash_t[i].ptr);
+            write(2,"Total freed bytes: ",19);
+            int bytes_leaked_total=snprintf(total_leaked_bytes,14,"%d",total_leaked_bytes_add);
+            write(2,total_leaked_bytes,bytes_leaked_total);
+            write(2,"B\n",2);
+         } 
+      }
+    }
   }
 }
 
