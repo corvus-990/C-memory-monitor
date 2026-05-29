@@ -16,3 +16,5 @@ Example:
 <img width="2006" height="509" alt="image" src="https://github.com/user-attachments/assets/c4ef7e9f-d4fd-45c7-ab7f-d686dc7e2207" />
 
 If you have reallocated a NULL pointer, the program will detect it as MALLOC, simply because reallocating a NULL pointer is like using malloc to allocate.
+
+**Note that the program tracks all memory using a hash table that is allocated in the BSS segment. If you are running a heavy program that allocates simultaneously a bunch of memory, increase the macro at line 12 `HASH_SIZE`, it is set by default to 51200 (approximately 1600KB). **
