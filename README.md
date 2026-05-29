@@ -6,3 +6,5 @@ Compile the program via:
 
 Inject it to a program via:
 `LD_PRELOAD="./mem_leak.so" ./<program>`
+
+Also added a wrapper around the _exit(), _Exit() and syscall() functions to show reports when program force quits. It does not show it for normal linux commands like ls or cat.. because of LD_PRELOAD limitations.
