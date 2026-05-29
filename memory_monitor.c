@@ -31,7 +31,7 @@ static bool stdlib_exit_initialize;
 static bool syscall_exit_initialize;
 static mem_log hash_t[HASH_SIZE];
 void __attribute__((constructor)) initialize(){
-  static mem_log init_log={0,NULL,1};
+  static mem_log init_log={0,NULL,1,NULL};
   for(int i=0;i<HASH_SIZE;i++){
     hash_t[i]=init_log;
   }
