@@ -329,6 +329,7 @@ void call_mem_leak(void){
     }
 
 
+    bool runOnceStack = false;
     if(free_mem){
       for(int i=0;i<HASH_SIZE;i++){
          //variable to run header prompt "--ALL LEAKS FREED--" only once
@@ -337,14 +338,17 @@ void call_mem_leak(void){
             if(!runOnce){
                 write(2,"\n--ALL LEAKS FREED--\n",21);
                 runOnce = true;
+                runOnceStack = true;
             }
             free(hash_t[i].ptr);
+         }
+      }
+       if(runOnceStack){
             write(2,"Total freed bytes: ",19);
             int bytes_leaked_total=snprintf(total_leaked_bytes,14,"%d",total_leaked_bytes_add);
             write(2,total_leaked_bytes,bytes_leaked_total);
             write(2,"B\n",2);
-         }
-      }
+        }
     }
   }
 }
