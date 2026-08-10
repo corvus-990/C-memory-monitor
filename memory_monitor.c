@@ -9,12 +9,13 @@
 #include <sys/syscall.h>
 #include <stdarg.h>
 #define BUMP_ALLOC 4096
-#define HASH_SIZE 51200 
+#define HASH_SIZE 51200
 #define M 0
 #define F 1
 #define R 2
 #define C 3
 
+/* initialising the memory log structure, all logs are made out of it */
 typedef struct{
   size_t user_size;
   void *ptr;
@@ -22,6 +23,8 @@ typedef struct{
   void *old_ptr;
 }mem_log;
 
+/* All static variabes declaratioins made to let dlsym first allocate data in the bump allocator instead of triggering an infinite*
+ * recursion using malloc. For each first time getting called for any of these functions, it never goes back to it again.       */
 static bool malloc_initialize;
 static bool free_initialize;
 static bool realloc_initialize;
@@ -31,7 +34,21 @@ static bool stdlib_exit_initialize;
 static bool syscall_exit_initialize;
 static bool mem_leak_disable;
 static bool free_mem;
+
+/* Hash table initialisation in .data segment to keep tracks of allocations */
 static mem_log hash_t[HASH_SIZE];
+
+/* dlsym real function pointers declaractions */
+void *(*real_malloc)(size_t)=NULL;
+void (*real_free)(void *)=NULL;
+void *(*real_realloc)(void*,size_t)=NULL;
+void *(*real_calloc)(size_t,size_t)=NULL;
+void (*real_uniExit)(int)=NULL;
+void (*real_stdExit)(int)=NULL;
+long (*real_syscall)(long,...)=NULL;
+void *calloc(size_t,size_t);
+
+/* Error handling if user inputs wrong arguments for program execution. */
 void error_msg(char *name[],bool *too_many){
     char buffer[255];
     if(*too_many){
@@ -49,6 +66,8 @@ void error_msg(char *name[],bool *too_many){
     mem_leak_disable=1;
     _Exit(0);
 }
+
+/* first operations the program executes */
 void __attribute__((constructor)) initialize(int argc,char *argv[]){
   char *fr="free";
   bool too_many_args=0;
@@ -67,6 +86,8 @@ void __attribute__((constructor)) initialize(int argc,char *argv[]){
     hash_t[i]=init_log;
   }
 }
+
+/* Insertion of allocations to the hash table */
 int hash_insert(mem_log *log){
   int slot=((uintptr_t)(log->ptr)) % HASH_SIZE;
   do{
@@ -83,6 +104,7 @@ int hash_insert(mem_log *log){
   return -1;
 }
 
+/* Deletion of allocations in the hash table and in memory */
 int hash_del(mem_log *log){
   int slot;
   unsigned search;
@@ -129,15 +151,7 @@ int hash_del(mem_log *log){
   return -1;
 }
 
-void *(*real_malloc)(size_t)=NULL;
-void (*real_free)(void *)=NULL;
-void *(*real_realloc)(void*,size_t)=NULL;
-void *(*real_calloc)(size_t,size_t)=NULL;
-void (*real_uniExit)(int)=NULL;
-void (*real_stdExit)(int)=NULL;
-long (*real_syscall)(long,...)=NULL;
-void *calloc(size_t,size_t);
-
+/* Function that handles all text log prompts */
 void custom_write(mem_log *log)
 {
   static char bytes_allocated[14];
@@ -179,6 +193,7 @@ void custom_write(mem_log *log)
   }
 }
 
+/* Malloc function wrapper */
 void *malloc(size_t size)
 {
   mem_log malloc_log={0,NULL,M,NULL};
@@ -202,6 +217,7 @@ void *malloc(size_t size)
   return ptr;
 }
 
+/* Free function wrapper */
 void free(void *ptr){
   mem_log free_log={0,NULL,F,NULL};
   free_log.ptr=ptr;
@@ -215,6 +231,8 @@ void free(void *ptr){
   return real_free(ptr);
 }
 
+
+/* Realloc function wrapper */
 void *realloc(void *ptr,size_t bytes){
   if(!real_realloc){
     realloc_initialize=1;
@@ -251,6 +269,7 @@ void *realloc(void *ptr,size_t bytes){
   }
 }
 
+/* Calloc function wrapper */
 void *calloc(size_t blocks,size_t bytes){
   static mem_log calloc_log={0,NULL,C,NULL};
   if(calloc_initialize || realloc_initialize || free_initialize || malloc_initialize || unistd_exit_initialize || stdlib_exit_initialize || syscall_exit_initialize){
@@ -273,6 +292,7 @@ void *calloc(size_t blocks,size_t bytes){
   return ret_user;
 }
 
+/* Function that handles memory leaks prompts */
 void call_mem_leak(void){
   if(!mem_leak_disable){
     char *title="\n\n-------MEMORY LEAKS-------\n";
@@ -308,21 +328,29 @@ void call_mem_leak(void){
       write(2,"B\n",2);
     }
 
+
     if(free_mem){
       for(int i=0;i<HASH_SIZE;i++){
+         //variable to run header prompt "--ALL LEAKS FREED--" only once
+         static bool runOnce = false;
          if(hash_t[i].ptr!=NULL){
-            write(2,"\n--ALL LEAKS FREED--\n",21);
+            if(!runOnce){
+                write(2,"\n--ALL LEAKS FREED--\n",21);
+                runOnce = true;
+            }
             free(hash_t[i].ptr);
             write(2,"Total freed bytes: ",19);
             int bytes_leaked_total=snprintf(total_leaked_bytes,14,"%d",total_leaked_bytes_add);
             write(2,total_leaked_bytes,bytes_leaked_total);
             write(2,"B\n",2);
-         } 
+         }
       }
     }
   }
 }
 
+/*************************************************************************************/
+/* Wrapper around all system calls for force program exits to show memory leaks logs */
 void _exit(int status){
   if(!real_uniExit){
     unistd_exit_initialize=1;
@@ -331,7 +359,7 @@ void _exit(int status){
   }
   call_mem_leak();
   real_uniExit(status);
-} 
+}
 
 void _Exit(int status){
   if(!real_stdExit){
@@ -365,7 +393,9 @@ long syscall(long number,...){
   }
 
 }
+/************************************************************/
 
+/* Always calls memory leaks logs prompts at the end of a program */
 void __attribute__((destructor)) mem_leak(){
   call_mem_leak();
 }
