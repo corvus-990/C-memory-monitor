@@ -363,6 +363,8 @@ void _exit(int status){
   }
   call_mem_leak();
   real_uniExit(status);
+  //telling the compiler after the real exit function it will never return to this point
+  __builtin_unreachable()
 }
 
 void _Exit(int status){
@@ -373,6 +375,8 @@ void _Exit(int status){
   }
   call_mem_leak();
   real_stdExit(status);
+  //telling the compiler after the real exit function it will never return to this point
+  __builtin_unreachable()
 }
 
 long syscall(long number,...){
