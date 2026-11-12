@@ -177,7 +177,7 @@ void custom_write(mem_log *log)
     int bytes_size=snprintf(bytes_allocated,14,"%d",(int)log->user_size);
     write(2,"[REALLOC]\t",10);
     write(2,memaddr_oldname,memaddr_oldname_size);
-    write(2," -> ",5);
+    write(2," -> ",4);
     write(2,memaddr_name,memaddr_size);
     write(2,"\t(",2);
     write(2,bytes_allocated,bytes_size);
