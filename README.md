@@ -20,10 +20,10 @@ The target program does not need to be recompiled or relinked.
 ## Build
 
 ```sh
-gcc -fPIC -shared -o mem_leak.so memory_monitor.c
+make
 ```
 
-On glibc older than 2.34, add `-ldl` to the end of the command.
+Make sure you are on a glibc version >= 2.34.
 
 ## Usage
 
