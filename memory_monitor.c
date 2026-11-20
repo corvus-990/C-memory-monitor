@@ -48,39 +48,20 @@ void (*real_stdExit)(int)=NULL;
 long (*real_syscall)(long,...)=NULL;
 void *calloc(size_t,size_t);
 
-/* Error handling if user inputs wrong arguments for program execution. */
-void error_msg(char *name[],bool *too_many){
-    char buffer[255];
-    if(*too_many){
-      int invarg_count=snprintf(buffer,255,"%s",name[1]);
-      write(2,"\"",1);
-      write(2,buffer,invarg_count);
-      write(2,"\" is not a valid argument\n",strlen("\" is not a valid argument\n"));
-    }else{
-      write(2,"Too many arguments\n",19);
-    }
-    write(2,"Usage: LD_PRELOAD=\"./<program.so>\" ",strlen("Usage: LD_PRELOAD=\"./<program.so>\" "));
-    int arg1_count=snprintf(buffer,255,"%s",name[0]);
-    write(2,buffer,arg1_count);
-    write(2," <optional arg: free>\n",22);
-    mem_leak_disable=1;
-    _Exit(0);
-}
 
 /* first operations the program executes */
-void __attribute__((constructor)) initialize(int argc,char *argv[]){
-  char *fr="free";
-  bool too_many_args=0;
-  if(argc>2){
-    error_msg(argv,&too_many_args);
-  }
-  if(argc==2){
-    if((strcmp(argv[1],fr)!=0)){
-      too_many_args=1;
-      error_msg(argv,&too_many_args);
+void __attribute__((constructor)) initialize(){
+  char *env = getenv("MM_FREE");
+ 
+  if(env){
+    if(strcmp(env, "1") == 0){
+      free_mem = true;
     }
-    (strcmp(argv[1],fr)==0)?free_mem=1:free_mem;
+  }else{
+    free_mem = false;
   }
+
+
   static mem_log init_log={0,NULL,1,NULL};
   for(int i=0;i<HASH_SIZE;i++){
     hash_t[i]=init_log;

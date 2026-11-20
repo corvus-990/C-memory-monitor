@@ -33,10 +33,10 @@ Preload the library when starting the program you want to check:
 LD_PRELOAD=./mem_leak.so ./your_program
 ```
 
-To also free the leaked blocks at exit, pass `free` as the only argument:
+To also free the leaked blocks at exit, set the environment variable `MM_FREE=1`:
 
 ```sh
-LD_PRELOAD=./mem_leak.so ./your_program free
+MM_FREE=1 LD_PRELOAD=./mem_leak.so ./your_program 
 ```
 
 All output is written to stderr, so it can be kept apart from the program's own output:
@@ -72,10 +72,10 @@ LD_PRELOAD=./mem_leak.so ./leaky
 Total leaked bytes: 20B
 ```
 
-With the `free` argument, the same report is followed by the cleanup:
+With the `MM_FREE=1`, the same report is followed by the cleanup:
 
 ```sh
-LD_PRELOAD=./mem_leak.so ./leaky free
+MM_FREE=1 LD_PRELOAD=./mem_leak.so ./leaky 
 ```
 
 ```text
@@ -118,7 +118,6 @@ The table does not grow, so `HASH_SIZE` must be larger than the highest number o
 
 ## Limitations
 
-- **Programs that take arguments.** The monitor reads its `free` option from the target program's command line. A program started with any other argument, or with more than one, stops with a usage message, so programs that need their own arguments cannot be monitored.
 - **Programs that close stderr at exit.** GNU coreutils such as `ls` and `cat` close stdout and stderr before library destructors run. Their allocations are traced, but the final leak report is lost.
 - **Abnormal termination.** No report is printed if the program is killed by a signal or calls `abort()`.
 - **Threads.** The table and the log buffers are shared without locking. Use it on single-threaded programs only.
