@@ -56,6 +56,8 @@ void __attribute__((constructor)) initialize(){
   if(env){
     if(strcmp(env, "1") == 0){
       free_mem = true;
+    }else{
+      free_mem = false;
     }
   }else{
     free_mem = false;
